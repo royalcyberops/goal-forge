@@ -18,6 +18,7 @@ Then open `http://localhost:4173`.
 
 - Detailed habit planning with purpose, minimum action, proof, preferred time, repeat days, and linked goals
 - Measurable goal management with deadlines, progress logging, and next-action prompts
+- Unlimited sub-goal roadmaps with quick add, editing, reordering, completion, and optional automatic parent progress
 - A daily focus queue that turns active goals into three small, proof-producing actions
 - Schedule-aware monthly habit matrix with visible rest days
 - Live daily and weekly charts

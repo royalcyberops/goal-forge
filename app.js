@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "goal-forge-state-v1";
-  const SCHEMA_VERSION = 2;
+  const SCHEMA_VERSION = 3;
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const CATEGORIES = ["Career", "Health", "Learning", "Mindset", "Life"];
   const MOODS = ["Awful", "Low", "Okay", "Good", "Great"];
@@ -109,6 +109,8 @@
   const defaultKey = monthKeyFor();
   let editingHabitId = null;
   let editingGoalId = null;
+  let editingSubgoalId = null;
+  const expandedGoalIds = new Set();
   let toastTimer = null;
   let persistenceEnabled = true;
 
@@ -137,6 +139,8 @@
         proof: "A dated file, screenshot, lab note, detection rule, or repository commit.",
         priority: 1,
         status: "active",
+        progressMode: "manual",
+        subgoals: [],
         createdOn: localDateISO()
       },
       {
@@ -152,6 +156,8 @@
         proof: "A workout entry, timer, or completed routine.",
         priority: 2,
         status: "active",
+        progressMode: "manual",
+        subgoals: [],
         createdOn: localDateISO()
       },
       {
@@ -167,6 +173,8 @@
         proof: "A dated note, solved exercise, code change, or finished study block.",
         priority: 3,
         status: "active",
+        progressMode: "manual",
+        subgoals: [],
         createdOn: localDateISO()
       }
     ];
@@ -225,6 +233,29 @@
     return days.length ? days.sort((a, b) => a - b) : [...ALL_DAYS];
   }
 
+  function normalizeSubgoals(value) {
+    if (!Array.isArray(value)) return [];
+    const usedIds = new Set();
+    return value.map((subgoal) => {
+      if (!subgoal || typeof subgoal !== "object") return null;
+      let id = typeof subgoal.id === "string" && subgoal.id ? subgoal.id : makeId("sg");
+      if (usedIds.has(id)) id = makeId("sg");
+      usedIds.add(id);
+      const title = String(subgoal.title || "").trim().slice(0, 100);
+      if (!title) return null;
+      const done = subgoal.done === true || subgoal.status === "completed";
+      return {
+        id,
+        title,
+        deadline: /^\d{4}-\d{2}-\d{2}$/.test(subgoal.deadline || "") ? subgoal.deadline : "",
+        proof: String(subgoal.proof || "").trim().slice(0, 140),
+        done,
+        createdOn: /^\d{4}-\d{2}-\d{2}$/.test(subgoal.createdOn || "") ? subgoal.createdOn : localDateISO(),
+        completedOn: done ? (/^\d{4}-\d{2}-\d{2}$/.test(subgoal.completedOn || "") ? subgoal.completedOn : localDateISO()) : ""
+      };
+    }).filter(Boolean);
+  }
+
   function normalizeGoal(goal, index, usedIds) {
     if (!goal || typeof goal !== "object") return null;
     let id = typeof goal.id === "string" && goal.id ? goal.id : makeId("g");
@@ -235,6 +266,10 @@
     const target = Number.isFinite(targetValue) && targetValue > 0 ? targetValue : 1;
     const current = Number.isFinite(currentValue) && currentValue >= 0 ? currentValue : 0;
     const deadline = /^\d{4}-\d{2}-\d{2}$/.test(goal.deadline || "") ? goal.deadline : "";
+    const progressMode = goal.progressMode === "subgoals" ? "subgoals" : "manual";
+    const subgoals = normalizeSubgoals(goal.subgoals);
+    const subgoalsComplete = subgoals.length > 0 && subgoals.every((subgoal) => subgoal.done);
+    const complete = progressMode === "subgoals" ? subgoalsComplete : (current >= target || goal.status === "completed");
     return {
       id,
       title: String(goal.title || `Goal ${index + 1}`).trim().slice(0, 80) || `Goal ${index + 1}`,
@@ -243,13 +278,15 @@
       target,
       unit: String(goal.unit || "sessions").trim().slice(0, 32) || "sessions",
       current,
+      progressMode,
+      subgoals,
       deadline,
       nextAction: String(goal.nextAction || goal.next || "Complete the smallest useful next action.").trim().slice(0, 240),
       proof: String(goal.proof || "Leave a dated note or visible result.").trim().slice(0, 240),
       priority: Number.isFinite(Number(goal.priority)) ? Number(goal.priority) : index + 1,
-      status: current >= target || goal.status === "completed" ? "completed" : "active",
+      status: complete ? "completed" : "active",
       createdOn: /^\d{4}-\d{2}-\d{2}$/.test(goal.createdOn || "") ? goal.createdOn : localDateISO(),
-      completedOn: current >= target ? (goal.completedOn || localDateISO()) : ""
+      completedOn: complete ? (goal.completedOn || localDateISO()) : ""
     };
   }
 
@@ -461,6 +498,47 @@
     return total ? Math.round((actual / total) * 100) : 0;
   }
 
+  function goalProgress(goal) {
+    const subgoals = Array.isArray(goal.subgoals) ? goal.subgoals : [];
+    const completedSubgoals = subgoals.filter((subgoal) => subgoal.done).length;
+    if (goal.progressMode === "subgoals") {
+      const total = subgoals.length;
+      return {
+        current: completedSubgoals,
+        target: total,
+        unit: "sub-goals",
+        percent: percentage(completedSubgoals, total),
+        complete: total > 0 && completedSubgoals === total,
+        completedSubgoals,
+        totalSubgoals: total
+      };
+    }
+    const target = Number(goal.target) > 0 ? Number(goal.target) : 1;
+    const current = Number(goal.current) >= 0 ? Number(goal.current) : 0;
+    return {
+      current,
+      target,
+      unit: goal.unit || "sessions",
+      percent: percentage(current, target),
+      complete: current >= target || goal.status === "completed",
+      completedSubgoals,
+      totalSubgoals: subgoals.length
+    };
+  }
+
+  function syncGoalCompletion(goal) {
+    const progress = goalProgress(goal);
+    goal.status = progress.complete ? "completed" : "active";
+    goal.completedOn = progress.complete ? (goal.completedOn || localDateISO()) : "";
+    return progress;
+  }
+
+  function findGoalAndSubgoal(goalId, subgoalId) {
+    const goal = state.goals.find((item) => item.id === goalId);
+    const subgoal = goal?.subgoals?.find((item) => item.id === subgoalId);
+    return { goal, subgoal };
+  }
+
   function formatNumber(value) {
     return Number.isInteger(value) ? String(value) : Number(value).toFixed(1).replace(/\.0$/, "");
   }
@@ -654,11 +732,59 @@
     return `${days} days left`;
   }
 
+  function subgoalDeadlineMeta(subgoal) {
+    if (!subgoal.deadline) return subgoal.done ? "Completed" : "No due date";
+    const deadline = new Date(`${subgoal.deadline}T00:00:00`);
+    const today = new Date(`${localDateISO()}T00:00:00`);
+    const days = Math.round((deadline - today) / 86400000);
+    if (subgoal.done) return `Completed${subgoal.completedOn ? ` ${subgoal.completedOn}` : ""}`;
+    if (days < 0) return `${Math.abs(days)}d overdue`;
+    if (days === 0) return "Due today";
+    if (days === 1) return "1 day left";
+    return `${days} days left`;
+  }
+
+  function renderSubgoalZone(goal) {
+    const subgoals = goal.subgoals || [];
+    const done = subgoals.filter((subgoal) => subgoal.done).length;
+    const expanded = expandedGoalIds.has(goal.id);
+    const countText = subgoals.length ? `${done}/${subgoals.length} complete` : "No sub-goals";
+    const rows = subgoals.length ? subgoals.map((subgoal, index) => `<div class="subgoal-row" data-subgoal-row="${subgoal.id}">
+      <input class="subgoal-check" type="checkbox" data-subgoal-toggle="${subgoal.id}" data-goal-id="${goal.id}" ${subgoal.done ? "checked" : ""} aria-label="Mark ${escapeHtml(subgoal.title)} ${subgoal.done ? "not complete" : "complete"}" />
+      <div class="subgoal-copy">
+        <span class="subgoal-title">${escapeHtml(subgoal.title)}</span>
+        <span class="subgoal-meta">${escapeHtml(subgoalDeadlineMeta(subgoal))}</span>
+        ${subgoal.proof ? `<span class="subgoal-proof">Proof: ${escapeHtml(subgoal.proof)}</span>` : ""}
+      </div>
+      <div class="subgoal-row-actions">
+        <button class="subgoal-move" type="button" data-subgoal-move="up" data-goal-id="${goal.id}" data-subgoal-id="${subgoal.id}" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(subgoal.title)} up">Up</button>
+        <button class="subgoal-move" type="button" data-subgoal-move="down" data-goal-id="${goal.id}" data-subgoal-id="${subgoal.id}" ${index === subgoals.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(subgoal.title)} down">Down</button>
+        <button class="subgoal-edit" type="button" data-subgoal-edit="${subgoal.id}" data-goal-id="${goal.id}">Edit</button>
+      </div>
+    </div>`).join("") : `<p class="subgoal-empty">Break this goal into concrete results you can finish and verify.</p>`;
+    return `<section class="subgoal-zone" aria-label="Sub-goals for ${escapeHtml(goal.title)}">
+      <div class="subgoal-toolbar">
+        <button class="subgoal-toggle" type="button" data-subgoal-panel-toggle="${goal.id}" aria-expanded="${expanded}">Roadmap <span class="subgoal-count">${countText}</span></button>
+        <button class="subgoal-add" type="button" data-subgoal-add="${goal.id}">Add sub-goal</button>
+      </div>
+      <div class="subgoal-panel ${expanded ? "" : "hidden"}">
+        <div class="subgoal-list">${rows}</div>
+        <form class="subgoal-quick-form" data-subgoal-quick-form="${goal.id}">
+          <label class="sr-only" for="quick-subgoal-${escapeHtml(goal.id)}">Quick add a sub-goal to ${escapeHtml(goal.title)}</label>
+          <input class="subgoal-quick-input" id="quick-subgoal-${escapeHtml(goal.id)}" maxlength="100" required autocomplete="off" placeholder="Add the next concrete result" />
+          <button class="subgoal-add" type="submit">Add</button>
+        </form>
+      </div>
+    </section>`;
+  }
+
   function renderGoals() {
     const list = $("#goals-list");
     if (!list) return;
     const goals = [...state.goals].sort((a, b) => {
-      if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+      const aComplete = goalProgress(a).complete;
+      const bComplete = goalProgress(b).complete;
+      if (aComplete !== bComplete) return aComplete ? 1 : -1;
       return a.priority - b.priority;
     });
     if (!goals.length) {
@@ -666,19 +792,27 @@
       return;
     }
     list.innerHTML = goals.map((goal) => {
-      const progress = Math.min(100, percentage(goal.current, goal.target));
+      const metrics = syncGoalCompletion(goal);
+      const progress = Math.min(100, metrics.percent);
       const linked = state.habits.filter((habit) => habit.goalId === goal.id);
-      const complete = goal.status === "completed" || goal.current >= goal.target;
+      const complete = metrics.complete;
+      const firstOpenSubgoal = goal.subgoals?.find((subgoal) => !subgoal.done);
+      const nextAction = goal.progressMode === "subgoals" && firstOpenSubgoal ? firstOpenSubgoal.title : goal.nextAction;
+      const nextProof = goal.progressMode === "subgoals" && firstOpenSubgoal?.proof ? firstOpenSubgoal.proof : goal.proof;
+      const progressText = goal.progressMode === "subgoals" && !metrics.target
+        ? "0 sub-goals planned"
+        : `${formatNumber(metrics.current)} / ${formatNumber(metrics.target)} ${escapeHtml(metrics.unit)}`;
       return `<article class="goal-row ${complete ? "is-complete" : ""}" data-goal-id="${goal.id}">
         <div class="goal-main">
           <div class="goal-top"><span class="goal-category">${escapeHtml(goal.category)}</span><h3>${escapeHtml(goal.title)}</h3>${complete ? `<span class="goal-status">Complete</span>` : ""}</div>
           <p class="goal-why">${escapeHtml(goal.why)}</p>
           <div class="goal-progress" role="progressbar" aria-label="${escapeHtml(goal.title)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span class="goal-progress-bar" style="width:${progress}%"></span></div>
-          <div class="goal-meta"><strong>${formatNumber(goal.current)} / ${formatNumber(goal.target)} ${escapeHtml(goal.unit)}</strong><span>${goalDeadlineMeta(goal)}</span><span>${linked.length} linked habit${linked.length === 1 ? "" : "s"}</span><span>${progress}%</span></div>
-          <p class="goal-step"><strong>Next smallest move</strong><span>${escapeHtml(goal.nextAction)}</span><small>Proof: ${escapeHtml(goal.proof)}</small></p>
+          <div class="goal-meta"><strong>${progressText}</strong><span>${goalDeadlineMeta(goal)}</span><span>${linked.length} linked habit${linked.length === 1 ? "" : "s"}</span><span>${progress}%</span></div>
+          <p class="goal-step"><strong>Next smallest move</strong><span>${escapeHtml(nextAction)}</span><small>Proof: ${escapeHtml(nextProof)}</small></p>
+          ${renderSubgoalZone(goal)}
         </div>
         <div class="goal-actions">
-          <button class="small-button" type="button" data-goal-increment="${goal.id}" ${complete ? "disabled" : ""}>${complete ? "Completed" : `+1 ${escapeHtml(goal.unit)}`}</button>
+          ${goal.progressMode === "manual" ? `<button class="small-button" type="button" data-goal-increment="${goal.id}" ${complete ? "disabled" : ""}>${complete ? "Completed" : `+1 ${escapeHtml(goal.unit)}`}</button>` : ""}
           <button class="secondary-button" type="button" data-goal-edit="${goal.id}">Edit</button>
         </div>
       </article>`;
@@ -686,7 +820,7 @@
   }
 
   function focusRanking(habit, goal) {
-    let score = goal && goal.status === "active" ? 100 - Number(goal.priority || 0) : 0;
+    let score = goal && !goalProgress(goal).complete ? 100 - Number(goal.priority || 0) : 0;
     if (goal?.deadline) {
       const days = Math.round((new Date(`${goal.deadline}T00:00:00`) - new Date(`${localDateISO()}T00:00:00`)) / 86400000);
       if (days >= 0 && days <= 14) score += 30 - days;
@@ -735,17 +869,22 @@
       list.innerHTML = `<div class="empty-state focus-complete"><strong>Daily plan complete.</strong><span>You kept today's promises. Log one line about what made it work so you can repeat it.</span></div>`;
       return;
     }
-    const nextGoals = state.goals.filter((goal) => goal.status === "active").sort((a, b) => a.priority - b.priority).slice(0, 2);
-    list.innerHTML = nextGoals.length ? nextGoals.map((goal) => `<article class="focus-item">
-      <div class="focus-copy"><span class="focus-eyebrow">${escapeHtml(goal.category)} · unlinked goal</span><h3>${escapeHtml(goal.title)}</h3><p class="focus-action"><strong>Next move</strong> ${escapeHtml(goal.nextAction)}</p><p class="focus-proof">Proof: ${escapeHtml(goal.proof)}</p></div>
+    const nextGoals = state.goals.filter((goal) => !goalProgress(goal).complete).sort((a, b) => a.priority - b.priority).slice(0, 2);
+    list.innerHTML = nextGoals.length ? nextGoals.map((goal) => {
+      const nextSubgoal = goal.subgoals?.find((subgoal) => !subgoal.done);
+      const nextMove = nextSubgoal?.title || goal.nextAction;
+      const nextProof = nextSubgoal?.proof || goal.proof;
+      return `<article class="focus-item">
+      <div class="focus-copy"><span class="focus-eyebrow">${escapeHtml(goal.category)} · unlinked goal</span><h3>${escapeHtml(goal.title)}</h3><p class="focus-action"><strong>Next move</strong> ${escapeHtml(nextMove)}</p><p class="focus-proof">Proof: ${escapeHtml(nextProof)}</p></div>
       <button class="focus-done" type="button" data-focus-goal="${goal.id}">View goal</button>
-    </article>`).join("") : `<div class="empty-state"><strong>Your day is open.</strong><span>Add one goal and one small habit that makes it more likely.</span></div>`;
+    </article>`;
+    }).join("") : `<div class="empty-state"><strong>Your day is open.</strong><span>Add one goal and one small habit that makes it more likely.</span></div>`;
   }
 
   function renderGoalOptions(selectedId = "") {
     const select = $("#dialog-habit-goal");
     if (!select) return;
-    select.innerHTML = `<option value="">No linked goal</option>` + state.goals.map((goal) => `<option value="${goal.id}" ${goal.id === selectedId ? "selected" : ""}>${escapeHtml(goal.title)}${goal.status === "completed" ? " (complete)" : ""}</option>`).join("");
+    select.innerHTML = `<option value="">No linked goal</option>` + state.goals.map((goal) => `<option value="${goal.id}" ${goal.id === selectedId ? "selected" : ""}>${escapeHtml(goal.title)}${goalProgress(goal).complete ? " (complete)" : ""}</option>`).join("");
   }
 
   function renderAll({ keepScroll = false } = {}) {
@@ -852,6 +991,19 @@
     return habit;
   }
 
+  function updateGoalProgressModeFields() {
+    const mode = $("#dialog-goal-progress-mode")?.value || "manual";
+    $$(".manual-progress-field").forEach((wrapper) => wrapper.classList.toggle("hidden", mode === "subgoals"));
+    [$("#dialog-goal-target"), $("#dialog-goal-unit"), $("#dialog-goal-current")].filter(Boolean).forEach((field) => {
+      field.disabled = mode === "subgoals";
+    });
+    if ($("#dialog-goal-target")) $("#dialog-goal-target").required = mode === "manual";
+    const hint = $("#goal-progress-mode-hint");
+    if (hint) hint.textContent = mode === "subgoals"
+      ? "Progress becomes the number of completed sub-goals. Add as many as this goal needs."
+      : "Progress stays separate from the sub-goal roadmap and changes when you log a number.";
+  }
+
   function openGoalDialog(goalId = null) {
     editingGoalId = goalId;
     const goal = state.goals.find((item) => item.id === goalId);
@@ -861,6 +1013,7 @@
     valueFor("#goal-edit-id", goal?.id || "");
     valueFor("#dialog-goal-title", goal?.title || "");
     valueFor("#dialog-goal-category", goal?.category || "Career");
+    valueFor("#dialog-goal-progress-mode", goal?.progressMode || "manual");
     valueFor("#dialog-goal-why", goal?.why || "");
     valueFor("#dialog-goal-target", goal?.target ?? 20);
     valueFor("#dialog-goal-unit", goal?.unit || "sessions");
@@ -868,6 +1021,7 @@
     valueFor("#dialog-goal-deadline", goal?.deadline || dateAfter(30));
     valueFor("#dialog-goal-next", goal?.nextAction || "");
     valueFor("#dialog-goal-proof", goal?.proof || "");
+    updateGoalProgressModeFields();
     $("#delete-goal-button")?.classList.toggle("hidden", !goal);
     const dialog = $("#goal-dialog");
     if (!dialog.open) dialog.showModal();
@@ -876,8 +1030,11 @@
 
   function collectGoalForm() {
     const title = $("#dialog-goal-title").value.trim();
-    const target = Number($("#dialog-goal-target").value);
-    const current = Number($("#dialog-goal-current").value || 0);
+    const progressMode = $("#dialog-goal-progress-mode")?.value === "subgoals" ? "subgoals" : "manual";
+    const targetValue = Number($("#dialog-goal-target").value);
+    const currentValue = Number($("#dialog-goal-current").value || 0);
+    const target = progressMode === "subgoals" ? Math.max(1, targetValue || 1) : targetValue;
+    const current = progressMode === "subgoals" ? Math.max(0, currentValue || 0) : currentValue;
     if (!title || !Number.isFinite(target) || target <= 0 || !Number.isFinite(current) || current < 0) return null;
     const inferredProof = "A dated note, screenshot, log, file, or completed result.";
     return {
@@ -887,10 +1044,57 @@
       target,
       unit: ($("#dialog-goal-unit")?.value.trim() || "sessions").slice(0, 32),
       current,
+      progressMode,
       deadline: $("#dialog-goal-deadline")?.value || "",
       nextAction: ($("#dialog-goal-next")?.value.trim() || "Complete the smallest useful next action.").slice(0, 240),
       proof: ($("#dialog-goal-proof")?.value.trim() || inferredProof).slice(0, 240),
-      status: current >= target ? "completed" : "active"
+      status: progressMode === "manual" && current >= target ? "completed" : "active"
+    };
+  }
+
+  function openSubgoalDialog(goalId, subgoalId = null) {
+    const { goal, subgoal } = findGoalAndSubgoal(goalId, subgoalId);
+    if (!goal) return;
+    editingSubgoalId = subgoal?.id || null;
+    $("#subgoal-form")?.reset();
+    $("#subgoal-dialog-title").textContent = subgoal ? "Edit sub-goal" : `Add to ${goal.title}`;
+    valueFor("#subgoal-goal-id", goal.id);
+    valueFor("#subgoal-edit-id", subgoal?.id || "");
+    valueFor("#dialog-subgoal-title", subgoal?.title || "");
+    valueFor("#dialog-subgoal-deadline", subgoal?.deadline || "");
+    valueFor("#dialog-subgoal-proof", subgoal?.proof || "");
+    if ($("#dialog-subgoal-done")) $("#dialog-subgoal-done").checked = Boolean(subgoal?.done);
+    $("#delete-subgoal-button")?.classList.toggle("hidden", !subgoal);
+    const dialog = $("#subgoal-dialog");
+    if (!dialog.open) dialog.showModal();
+    setTimeout(() => $("#dialog-subgoal-title")?.focus(), 50);
+  }
+
+  function createSubgoal(title, details = {}) {
+    const done = Boolean(details.done);
+    return {
+      id: makeId("sg"),
+      title: title.trim().slice(0, 100),
+      deadline: /^\d{4}-\d{2}-\d{2}$/.test(details.deadline || "") ? details.deadline : "",
+      proof: String(details.proof || "").trim().slice(0, 140),
+      done,
+      createdOn: localDateISO(),
+      completedOn: done ? localDateISO() : ""
+    };
+  }
+
+  function collectSubgoalForm() {
+    const goal = state.goals.find((item) => item.id === $("#subgoal-goal-id")?.value);
+    const title = $("#dialog-subgoal-title")?.value.trim() || "";
+    if (!goal || !title) return null;
+    return {
+      goal,
+      details: {
+        title: title.slice(0, 100),
+        deadline: $("#dialog-subgoal-deadline")?.value || "",
+        proof: $("#dialog-subgoal-proof")?.value.trim().slice(0, 140) || "",
+        done: Boolean($("#dialog-subgoal-done")?.checked)
+      }
     };
   }
 
@@ -982,7 +1186,42 @@
     });
 
     $("#add-goal-button")?.addEventListener("click", () => openGoalDialog());
-    $("#goals-list")?.addEventListener("click", (event) => {
+    $("#dialog-goal-progress-mode")?.addEventListener("change", updateGoalProgressModeFields);
+    const goalsList = $("#goals-list");
+    goalsList?.addEventListener("click", (event) => {
+      const panelToggle = event.target.closest("[data-subgoal-panel-toggle]");
+      if (panelToggle) {
+        const goalId = panelToggle.dataset.subgoalPanelToggle;
+        if (expandedGoalIds.has(goalId)) expandedGoalIds.delete(goalId);
+        else expandedGoalIds.add(goalId);
+        renderGoals();
+        return;
+      }
+      const addSubgoal = event.target.closest("[data-subgoal-add]");
+      if (addSubgoal) {
+        expandedGoalIds.add(addSubgoal.dataset.subgoalAdd);
+        renderGoals();
+        openSubgoalDialog(addSubgoal.dataset.subgoalAdd);
+        return;
+      }
+      const editSubgoal = event.target.closest("[data-subgoal-edit]");
+      if (editSubgoal) {
+        expandedGoalIds.add(editSubgoal.dataset.goalId);
+        openSubgoalDialog(editSubgoal.dataset.goalId, editSubgoal.dataset.subgoalEdit);
+        return;
+      }
+      const moveSubgoal = event.target.closest("[data-subgoal-move]");
+      if (moveSubgoal) {
+        const goal = state.goals.find((item) => item.id === moveSubgoal.dataset.goalId);
+        const index = goal?.subgoals.findIndex((item) => item.id === moveSubgoal.dataset.subgoalId) ?? -1;
+        const nextIndex = moveSubgoal.dataset.subgoalMove === "up" ? index - 1 : index + 1;
+        if (!goal || index < 0 || nextIndex < 0 || nextIndex >= goal.subgoals.length) return;
+        [goal.subgoals[index], goal.subgoals[nextIndex]] = [goal.subgoals[nextIndex], goal.subgoals[index]];
+        expandedGoalIds.add(goal.id);
+        renderAll();
+        showToast("Sub-goal order updated");
+        return;
+      }
       const emptyAdd = event.target.closest("[data-empty-add-goal]");
       if (emptyAdd) return openGoalDialog();
       const edit = event.target.closest("[data-goal-edit]");
@@ -990,14 +1229,39 @@
       const increment = event.target.closest("[data-goal-increment]");
       if (!increment) return;
       const goal = state.goals.find((item) => item.id === increment.dataset.goalIncrement);
-      if (!goal || goal.status === "completed") return;
+      if (!goal || goal.progressMode !== "manual" || goalProgress(goal).complete) return;
       goal.current = Math.min(goal.target, Number(goal.current) + 1);
-      if (goal.current >= goal.target) {
-        goal.status = "completed";
-        goal.completedOn = localDateISO();
+      const progress = syncGoalCompletion(goal);
+      if (progress.complete) {
         showToast(`${goal.title} completed`);
       } else showToast(`Progress logged for ${goal.title}`);
       renderAll();
+    });
+    goalsList?.addEventListener("change", (event) => {
+      if (!event.target.matches(".subgoal-check")) return;
+      const { goal, subgoal } = findGoalAndSubgoal(event.target.dataset.goalId, event.target.dataset.subgoalToggle);
+      if (!goal || !subgoal) return;
+      subgoal.done = event.target.checked;
+      subgoal.completedOn = subgoal.done ? (subgoal.completedOn || localDateISO()) : "";
+      expandedGoalIds.add(goal.id);
+      const progress = syncGoalCompletion(goal);
+      renderAll();
+      if (progress.complete) showToast(`${goal.title} completed`);
+      else showToast(subgoal.done ? "Sub-goal completed" : "Sub-goal reopened");
+    });
+    goalsList?.addEventListener("submit", (event) => {
+      const form = event.target.closest("[data-subgoal-quick-form]");
+      if (!form) return;
+      event.preventDefault();
+      const goal = state.goals.find((item) => item.id === form.dataset.subgoalQuickForm);
+      const input = form.querySelector(".subgoal-quick-input");
+      const title = input?.value.trim() || "";
+      if (!goal || !title) return;
+      goal.subgoals.push(createSubgoal(title));
+      expandedGoalIds.add(goal.id);
+      syncGoalCompletion(goal);
+      renderAll();
+      showToast("Sub-goal added");
     });
     $("#goal-form")?.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -1007,11 +1271,13 @@
         const goal = state.goals.find((item) => item.id === editingGoalId);
         if (goal) {
           Object.assign(goal, details);
-          goal.completedOn = details.status === "completed" ? (goal.completedOn || localDateISO()) : "";
+          syncGoalCompletion(goal);
         }
         showToast("Goal updated");
       } else {
-        state.goals.push({ id: makeId("g"), ...details, priority: state.goals.length + 1, createdOn: localDateISO(), completedOn: details.status === "completed" ? localDateISO() : "" });
+        const goal = { id: makeId("g"), ...details, subgoals: [], priority: state.goals.length + 1, createdOn: localDateISO(), completedOn: "" };
+        syncGoalCompletion(goal);
+        state.goals.push(goal);
         showToast("Goal added");
       }
       $("#goal-dialog")?.close();
@@ -1020,12 +1286,53 @@
     $("#goal-cancel")?.addEventListener("click", () => $("#goal-dialog")?.close());
     $("#delete-goal-button")?.addEventListener("click", () => {
       const goal = state.goals.find((item) => item.id === editingGoalId);
-      if (!goal || !confirm(`Delete “${goal.title}”? Linked habits and their history will stay.`)) return;
+      const subgoalNote = goal?.subgoals.length ? ` Its ${goal.subgoals.length} sub-goal${goal.subgoals.length === 1 ? "" : "s"} will also be deleted.` : "";
+      if (!goal || !confirm(`Delete “${goal.title}”?${subgoalNote} Linked habits and their history will stay.`)) return;
       state.goals = state.goals.filter((item) => item.id !== editingGoalId);
       state.habits.forEach((habit) => { if (habit.goalId === editingGoalId) habit.goalId = ""; });
+      expandedGoalIds.delete(editingGoalId);
       $("#goal-dialog")?.close();
       renderAll();
       showToast("Goal deleted; habits kept");
+    });
+
+    $("#subgoal-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const collected = collectSubgoalForm();
+      if (!collected) return;
+      const { goal, details } = collected;
+      const subgoalId = $("#subgoal-edit-id")?.value || editingSubgoalId;
+      const subgoal = goal.subgoals.find((item) => item.id === subgoalId);
+      if (subgoal) {
+        Object.assign(subgoal, details);
+        subgoal.completedOn = subgoal.done ? (subgoal.completedOn || localDateISO()) : "";
+        showToast("Sub-goal updated");
+      } else {
+        goal.subgoals.push(createSubgoal(details.title, details));
+        showToast("Sub-goal added");
+      }
+      expandedGoalIds.add(goal.id);
+      syncGoalCompletion(goal);
+      editingSubgoalId = null;
+      $("#subgoal-dialog")?.close();
+      renderAll();
+    });
+    $("#subgoal-cancel")?.addEventListener("click", () => {
+      editingSubgoalId = null;
+      $("#subgoal-dialog")?.close();
+    });
+    $("#delete-subgoal-button")?.addEventListener("click", () => {
+      const goalId = $("#subgoal-goal-id")?.value;
+      const subgoalId = $("#subgoal-edit-id")?.value || editingSubgoalId;
+      const { goal, subgoal } = findGoalAndSubgoal(goalId, subgoalId);
+      if (!goal || !subgoal || !confirm(`Delete “${subgoal.title}”?`)) return;
+      goal.subgoals = goal.subgoals.filter((item) => item.id !== subgoal.id);
+      syncGoalCompletion(goal);
+      expandedGoalIds.add(goal.id);
+      editingSubgoalId = null;
+      $("#subgoal-dialog")?.close();
+      renderAll();
+      showToast("Sub-goal deleted");
     });
 
     $("#daily-focus-list")?.addEventListener("click", (event) => {
@@ -1036,7 +1343,11 @@
         return;
       }
       const goalButton = event.target.closest("[data-focus-goal]");
-      if (goalButton) targetElement("goals-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (goalButton) {
+        expandedGoalIds.add(goalButton.dataset.focusGoal);
+        renderGoals();
+        targetElement("goals-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
     $("#jump-to-goals")?.addEventListener("click", () => targetElement("goals-section")?.scrollIntoView({ behavior: "smooth", block: "start" }));
 

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#080808" />
     <meta name="description" content="A monthly goal and habit tracker inspired by a spreadsheet dashboard." />
     <title>Goal Forge</title>
-    <link rel="stylesheet" href="styles.css?v=20260813-2" />
+    <link rel="stylesheet" href="styles.css?v=20260813-4" />
   </head>
   <body>
     <a class="skip-link" href="#dashboard">Skip to dashboard</a>
@@ -235,9 +235,10 @@
         <div class="form-grid">
           <div class="form-field form-field-wide"><label for="dialog-goal-title">Goal title <span aria-hidden="true">*</span></label><input id="dialog-goal-title" required maxlength="72" autocomplete="off" placeholder="e.g. Build a portfolio project" /></div>
           <div class="form-field"><label for="dialog-goal-category">Category</label><select id="dialog-goal-category"><option value="">Choose a category</option><option>Career</option><option>Health</option><option>Learning</option><option>Mindset</option><option>Life</option></select></div>
-          <div class="form-field"><label for="dialog-goal-target">Target <span aria-hidden="true">*</span></label><input id="dialog-goal-target" type="number" required min="1" step="1" placeholder="12" /></div>
-          <div class="form-field"><label for="dialog-goal-unit">Unit</label><input id="dialog-goal-unit" maxlength="24" placeholder="projects, hours, sessions" /></div>
-          <div class="form-field"><label for="dialog-goal-current">Current progress</label><input id="dialog-goal-current" type="number" min="0" step="1" value="0" /></div>
+          <div class="form-field form-field-wide goal-progress-mode"><label for="dialog-goal-progress-mode">Progress tracking</label><select id="dialog-goal-progress-mode"><option value="manual">Manual number</option><option value="subgoals">Sub-goal completion</option></select><p class="field-help" id="goal-progress-mode-hint">Choose sub-goal completion to calculate this goal from the smaller outcomes you finish.</p></div>
+          <div class="form-field manual-progress-field"><label for="dialog-goal-target">Target <span aria-hidden="true">*</span></label><input id="dialog-goal-target" type="number" required min="1" step="1" placeholder="12" /></div>
+          <div class="form-field manual-progress-field"><label for="dialog-goal-unit">Unit</label><input id="dialog-goal-unit" maxlength="24" placeholder="projects, hours, sessions" /></div>
+          <div class="form-field manual-progress-field"><label for="dialog-goal-current">Current progress</label><input id="dialog-goal-current" type="number" min="0" step="1" value="0" /></div>
           <div class="form-field form-field-wide"><label for="dialog-goal-why">Why this matters</label><input id="dialog-goal-why" maxlength="160" placeholder="What gets better when this is true?" /></div>
           <div class="form-field"><label for="dialog-goal-deadline">Target date</label><input id="dialog-goal-deadline" type="date" /></div>
           <div class="form-field"><label for="dialog-goal-next">Next visible step</label><input id="dialog-goal-next" maxlength="100" placeholder="The action you can take next" /></div>
@@ -248,6 +249,27 @@
           <span></span>
           <button class="secondary-button" type="button" id="goal-cancel" data-close-dialog="goal-dialog">Cancel</button>
           <button class="primary-button" type="submit">Save goal</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="subgoal-dialog">
+      <form method="dialog" id="subgoal-form">
+        <div class="dialog-head"><div><span class="section-kicker">Goal steps</span><h2 id="subgoal-dialog-title">Add a sub-goal</h2></div><button class="close-button" type="button" data-close-dialog="subgoal-dialog" aria-label="Close">×</button></div>
+        <p class="dialog-hint">Keep each sub-goal concrete enough to finish, verify, and move forward.</p>
+        <input id="subgoal-goal-id" type="hidden" />
+        <input id="subgoal-edit-id" type="hidden" />
+        <div class="form-grid">
+          <div class="form-field form-field-wide"><label for="dialog-subgoal-title">Sub-goal title <span aria-hidden="true">*</span></label><input id="dialog-subgoal-title" required maxlength="100" autocomplete="off" placeholder="e.g. Publish the first working version" /></div>
+          <div class="form-field"><label for="dialog-subgoal-deadline">Due date</label><input id="dialog-subgoal-deadline" type="date" /></div>
+          <div class="form-field"><label for="dialog-subgoal-proof">Proof of done</label><input id="dialog-subgoal-proof" maxlength="140" placeholder="A link, screenshot, result, or note" /></div>
+          <div class="form-field form-field-wide"><label class="subgoal-done-option" for="dialog-subgoal-done"><input id="dialog-subgoal-done" type="checkbox" /> <span>Already complete</span></label></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="danger-button hidden" type="button" id="delete-subgoal-button">Delete sub-goal</button>
+          <span></span>
+          <button class="secondary-button" type="button" id="subgoal-cancel" data-close-dialog="subgoal-dialog">Cancel</button>
+          <button class="primary-button" type="submit">Save sub-goal</button>
         </div>
       </form>
     </dialog>
@@ -265,6 +287,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20260813-3"></script>
+    <script src="app.js?v=20260813-4"></script>
   </body>
 </html>
