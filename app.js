@@ -262,7 +262,9 @@
     const suggestedGoal = seedLinks ? inferred.goalId : "";
     const requestedGoal = String(habit.goalId || "");
     const goalId = goalIds.has(requestedGoal) ? requestedGoal : (goalIds.has(suggestedGoal) ? suggestedGoal : "");
-    const scheduledDays = normalizeDays(habit.scheduledDays || habit.schedule || starter?.scheduledDays);
+    const scheduledDays = seedLinks && !hadSchedule
+      ? [...ALL_DAYS]
+      : normalizeDays(habit.scheduledDays || habit.schedule || starter?.scheduledDays);
     const rawHistory = Array.isArray(habit.scheduleHistory) ? habit.scheduleHistory : [];
     const historyExisted = rawHistory.length > 0;
     const scheduleHistory = rawHistory.map((entry) => ({
