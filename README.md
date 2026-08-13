@@ -2,6 +2,8 @@
 
 A local-first monthly goal and habit tracker rebuilt from the supplied video reference.
 
+**Live app:** [goal-forge-royalcyberops-497.netlify.app](https://goal-forge-royalcyberops-497.netlify.app)
+
 ## Run
 
 Open `index.html` directly, or serve this folder with any static web server. For example:
