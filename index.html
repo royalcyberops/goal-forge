@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080808" />
+    <meta name="description" content="A monthly goal and habit tracker inspired by a spreadsheet dashboard." />
+    <title>Goal Forge</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#dashboard">Skip to dashboard</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <a class="brand" href="#dashboard" aria-label="Goal Forge dashboard">
+          <span>GOAL</span><strong>FORGE</strong>
+        </a>
+
+        <nav class="side-nav">
+          <button class="nav-item active" data-target="dashboard">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+          </button>
+          <button class="nav-item" data-target="habits-section">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Habits
+          </button>
+          <button class="nav-item" data-target="analytics-section">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg>
+            Analytics
+          </button>
+          <button class="nav-item" data-target="logs-section">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Logs
+          </button>
+          <button class="nav-item" id="settings-nav">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3V9.6h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.33.72.6 1 .3.3.68.5 1.1.6h.1v4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
+            Settings
+          </button>
+        </nav>
+
+        <section class="side-card streak-card" aria-labelledby="streak-title">
+          <div class="side-card-title" id="streak-title">Current streaks</div>
+          <div id="streak-list"></div>
+        </section>
+
+        <form class="side-card quick-add" id="quick-add-form">
+          <label class="side-card-title" for="habit-name">Quick add habit</label>
+          <input id="habit-name" name="habit" maxlength="36" placeholder="Habit name..." autocomplete="off" required />
+          <button type="submit" class="add-habit-button">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Add habit
+          </button>
+        </form>
+
+        <p class="storage-note">Saved locally on this device</p>
+      </aside>
+
+      <main class="main-area" id="dashboard" tabindex="-1">
+        <h1 class="sr-only">Goal Forge monthly habit tracker</h1>
+        <header class="topbar">
+          <button class="mobile-brand" aria-label="Open navigation">GF</button>
+          <div class="progress-identity">
+            <span class="level-badge" id="level-badge">LEVEL 1</span>
+            <div class="xp-track" aria-label="Experience to next level"><span id="xp-fill"></span></div>
+            <span class="xp-label" id="xp-label">0 / 500 XP</span>
+          </div>
+          <div class="top-actions">
+            <button class="icon-text-button" id="today-button">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+              Today
+            </button>
+            <button class="icon-text-button" id="settings-button">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3V9.6h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.33.72.6 1 .3.3.68.5 1.1.6h.1v4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
+              Settings
+            </button>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <section class="control-strip" aria-label="Calendar settings">
+            <div class="section-kicker">Calendar settings</div>
+            <label>Year <select id="year-select"></select></label>
+            <label>Month <select id="month-select"></select></label>
+            <div class="month-summary" id="month-summary">August 2026</div>
+          </section>
+
+          <section class="overview-grid" id="analytics-section">
+            <article class="panel chart-panel">
+              <div class="panel-heading"><h2>Daily Progress</h2><span>% of habits completed</span></div>
+              <div class="chart-area daily-chart" id="daily-chart"></div>
+            </article>
+            <article class="panel chart-panel weekly-panel">
+              <div class="panel-heading"><h2>Weekly Progress</h2><span>% of habits completed</span></div>
+              <div class="chart-area weekly-chart" id="weekly-chart"></div>
+            </article>
+            <article class="stat-stack" aria-label="Monthly totals">
+              <div class="mini-stat"><span>Goal</span><strong id="goal-count">0</strong></div>
+              <div class="mini-stat"><span>Completed</span><strong id="completed-count">0</strong></div>
+              <div class="mini-stat"><span>Left</span><strong id="left-count">0</strong></div>
+            </article>
+            <article class="panel overall-panel">
+              <h2>Overall Stats</h2>
+              <div class="donut" id="overall-donut"><span id="overall-percent">0%</span></div>
+              <div class="legend"><span><i class="legend-complete"></i>Completed</span><span><i></i>Left</span></div>
+            </article>
+          </section>
+
+          <section class="work-grid" id="habits-section">
+            <div class="left-work-column">
+            <article class="panel tracker-panel">
+              <div class="panel-heading tracker-heading">
+                <div><h2>My Habits</h2><span id="tracker-subtitle">Tap a square when the habit is done.</span></div>
+                <button class="small-button" id="add-habit-inline">+ Add habit</button>
+              </div>
+              <div class="tracker-scroll" id="tracker-scroll">
+                <div class="habit-grid" id="habit-grid"></div>
+              </div>
+            </article>
+
+            <section class="panel logs-panel" id="logs-section">
+              <div class="panel-heading">
+                <div><h2>Daily Logs</h2><span>Mood and sleep sit beside the habits that shaped them.</span></div>
+                <span class="log-help">Click a mood · edit sleep inline</span>
+              </div>
+              <div class="logs-scroll">
+                <div class="log-grid" id="mood-log"></div>
+                <div class="log-grid sleep-grid" id="sleep-log"></div>
+              </div>
+            </section>
+            </div>
+
+            <aside class="analysis-column">
+              <article class="panel analysis-panel">
+                <div class="panel-heading"><h2>Analysis</h2><span>Monthly completion</span></div>
+                <div class="analysis-table" id="analysis-table"></div>
+              </article>
+              <article class="panel top-habits-panel">
+                <div class="panel-heading"><h2>Top Habits</h2><span>Best this month</span></div>
+                <ol id="top-habits"></ol>
+              </article>
+            </aside>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <button class="active" data-target="dashboard"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Home</span></button>
+      <button data-target="habits-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Habits</span></button>
+      <button id="mobile-add"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
+      <button data-target="analytics-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg><span>Stats</span></button>
+      <button data-target="logs-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Logs</span></button>
+    </nav>
+
+    <dialog id="habit-dialog">
+      <form method="dialog" id="habit-dialog-form">
+        <div class="dialog-head"><div><span class="section-kicker">My habits</span><h2 id="habit-dialog-title">Add a habit</h2></div><button class="close-button" type="button" data-close-dialog="habit-dialog" aria-label="Close">×</button></div>
+        <label for="dialog-habit-name">Habit name</label>
+        <input id="dialog-habit-name" maxlength="36" required autocomplete="off" placeholder="e.g. Practice coding" />
+        <div class="dialog-actions">
+          <button class="danger-button hidden" type="button" id="delete-habit-button">Delete habit</button>
+          <span></span>
+          <button class="secondary-button" type="button" data-close-dialog="habit-dialog">Cancel</button>
+          <button class="primary-button" id="save-habit-button" type="submit">Save habit</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="settings-dialog">
+      <form method="dialog">
+        <div class="dialog-head"><div><span class="section-kicker">Goal Forge</span><h2>Settings & data</h2></div><button class="close-button" type="button" data-close-dialog="settings-dialog" aria-label="Close">×</button></div>
+        <p class="dialog-copy">Your tracker is saved only in this browser. Export a backup before clearing data.</p>
+        <div class="settings-actions">
+          <button type="button" class="secondary-button" id="export-button">Export backup</button>
+          <button type="button" class="secondary-button" id="clear-month-button">Clear this month</button>
+          <button type="button" class="danger-button" id="reset-button">Reset everything</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
