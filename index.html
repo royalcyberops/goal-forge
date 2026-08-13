@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#080808" />
     <meta name="description" content="A monthly goal and habit tracker inspired by a spreadsheet dashboard." />
     <title>Goal Forge</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260813-2" />
   </head>
   <body>
     <a class="skip-link" href="#dashboard">Skip to dashboard</a>
@@ -21,7 +21,15 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             Dashboard
           </button>
-          <button class="nav-item" data-target="habits-section">
+          <button class="nav-item" data-target="daily-focus">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Today
+          </button>
+          <button class="nav-item" data-target="goals-section">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M7 3h10"/><path d="M7 21h10"/></svg>
+            Goals
+          </button>
+          <button class="nav-item" data-target="habit-section">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             Habits
           </button>
@@ -45,7 +53,7 @@
         </section>
 
         <form class="side-card quick-add" id="quick-add-form">
-          <label class="side-card-title" for="habit-name">Quick add habit</label>
+          <label class="side-card-title" for="habit-name">Plan habit</label>
           <input id="habit-name" name="habit" maxlength="36" placeholder="Habit name..." autocomplete="off" required />
           <button type="submit" class="add-habit-button">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -58,7 +66,7 @@
 
       <main class="main-area" id="dashboard" tabindex="-1">
         <h1 class="sr-only">Goal Forge monthly habit tracker</h1>
-        <header class="topbar">
+        <header class="topbar" id="dashboard-top">
           <button class="mobile-brand" aria-label="Open navigation">GF</button>
           <div class="progress-identity">
             <span class="level-badge" id="level-badge">LEVEL 1</span>
@@ -85,6 +93,25 @@
             <div class="month-summary" id="month-summary">August 2026</div>
           </section>
 
+          <section class="daily-focus-panel" id="daily-focus" aria-labelledby="daily-focus-title">
+            <div class="daily-focus-head">
+              <div>
+                <span class="section-kicker">Today’s focus</span>
+                <h2 id="daily-focus-title">Win the next honest action.</h2>
+                <p>Start with the habits that make today count. Small proof beats a perfect plan.</p>
+              </div>
+              <div class="daily-score" aria-live="polite">
+                <strong id="daily-score-value">0/0</strong>
+                <span id="daily-score-label">No habits planned</span>
+              </div>
+            </div>
+            <div class="daily-focus-list" id="daily-focus-list" aria-live="polite"></div>
+            <div class="daily-focus-action">
+              <button class="small-button focus-link" id="jump-to-goals" type="button">Review goals</button>
+              <span class="focus-proof">Build evidence before motivation fades.</span>
+            </div>
+          </section>
+
           <section class="overview-grid" id="analytics-section">
             <article class="panel chart-panel">
               <div class="panel-heading"><h2>Daily Progress</h2><span>% of habits completed</span></div>
@@ -95,7 +122,7 @@
               <div class="chart-area weekly-chart" id="weekly-chart"></div>
             </article>
             <article class="stat-stack" aria-label="Monthly totals">
-              <div class="mini-stat"><span>Goal</span><strong id="goal-count">0</strong></div>
+              <div class="mini-stat"><span>Possible</span><strong id="goal-count">0</strong></div>
               <div class="mini-stat"><span>Completed</span><strong id="completed-count">0</strong></div>
               <div class="mini-stat"><span>Left</span><strong id="left-count">0</strong></div>
             </article>
@@ -106,7 +133,19 @@
             </article>
           </section>
 
-          <section class="work-grid" id="habits-section">
+          <section class="goals-section" id="goals-section" aria-labelledby="goals-title">
+            <div class="goals-head">
+              <div>
+                <span class="section-kicker">Long-game system</span>
+                <h2 id="goals-title">Goals that raise your baseline</h2>
+                <p>Link the work you repeat to the outcomes you want to make inevitable.</p>
+              </div>
+              <button class="small-button" id="add-goal-button" type="button">+ Add goal</button>
+            </div>
+            <div class="goals-list" id="goals-list" aria-live="polite"></div>
+          </section>
+
+          <section class="work-grid" id="habit-section">
             <div class="left-work-column">
             <article class="panel tracker-panel">
               <div class="panel-heading tracker-heading">
@@ -147,22 +186,68 @@
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
       <button class="active" data-target="dashboard"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Home</span></button>
-      <button data-target="habits-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Habits</span></button>
-      <button id="mobile-add"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
-      <button data-target="analytics-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg><span>Stats</span></button>
+      <button data-target="goals-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M7 3h10"/><path d="M7 21h10"/></svg><span>Goals</span></button>
+      <button id="add-habit-mobile"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
+      <button data-target="habit-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Habits</span></button>
       <button data-target="logs-section"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Logs</span></button>
     </nav>
 
     <dialog id="habit-dialog">
-      <form method="dialog" id="habit-dialog-form">
+      <form method="dialog" id="habit-form">
         <div class="dialog-head"><div><span class="section-kicker">My habits</span><h2 id="habit-dialog-title">Add a habit</h2></div><button class="close-button" type="button" data-close-dialog="habit-dialog" aria-label="Close">×</button></div>
-        <label for="dialog-habit-name">Habit name</label>
-        <input id="dialog-habit-name" maxlength="36" required autocomplete="off" placeholder="e.g. Practice coding" />
+        <p class="dialog-hint">Fields marked <strong aria-hidden="true">*</strong> are needed to keep the plan clear. You can refine the rest later.</p>
+        <input id="habit-edit-id" type="hidden" />
+        <div class="form-grid">
+          <div class="form-field form-field-wide"><label for="dialog-habit-name">Habit name <span aria-hidden="true">*</span></label><input id="dialog-habit-name" maxlength="36" required autocomplete="off" placeholder="e.g. Practice coding" /></div>
+          <div class="form-field"><label for="dialog-habit-category">Category</label><select id="dialog-habit-category"><option value="">Choose a category</option><option>Career</option><option>Health</option><option>Learning</option><option>Mindset</option><option>Life</option></select></div>
+          <div class="form-field"><label for="dialog-habit-goal">Connected goal</label><select id="dialog-habit-goal"><option value="">No goal linked</option></select></div>
+          <div class="form-field form-field-wide"><label for="dialog-habit-why">Why it matters</label><input id="dialog-habit-why" maxlength="120" placeholder="The baseline this protects" /></div>
+          <div class="form-field"><label for="dialog-habit-minimum">Minimum version</label><input id="dialog-habit-minimum" maxlength="80" placeholder="e.g. 10 focused minutes" /></div>
+          <div class="form-field"><label for="dialog-habit-proof">Proof of done</label><input id="dialog-habit-proof" maxlength="80" placeholder="e.g. note, screenshot, log" /></div>
+          <div class="form-field"><label for="dialog-habit-time">Preferred time</label><input id="dialog-habit-time" type="time" /></div>
+          <fieldset class="form-section form-field-wide" id="dialog-habit-days">
+            <legend>Repeat days</legend>
+            <div class="weekday-picker">
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="1" checked /><span>Mon</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="2" checked /><span>Tue</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="3" checked /><span>Wed</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="4" checked /><span>Thu</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="5" checked /><span>Fri</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="6" checked /><span>Sat</span></label>
+              <label class="weekday-option"><input type="checkbox" name="habit-day" value="0" checked /><span>Sun</span></label>
+            </div>
+          </fieldset>
+        </div>
         <div class="dialog-actions">
           <button class="danger-button hidden" type="button" id="delete-habit-button">Delete habit</button>
           <span></span>
-          <button class="secondary-button" type="button" data-close-dialog="habit-dialog">Cancel</button>
+          <button class="secondary-button" type="button" id="habit-cancel" data-close-dialog="habit-dialog">Cancel</button>
           <button class="primary-button" id="save-habit-button" type="submit">Save habit</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="goal-dialog">
+      <form method="dialog" id="goal-form">
+        <div class="dialog-head"><div><span class="section-kicker">Long-game system</span><h2 id="goal-dialog-title">Add a goal</h2></div><button class="close-button" type="button" data-close-dialog="goal-dialog" aria-label="Close">×</button></div>
+        <p class="dialog-hint">A goal is the direction. Your habits are the proof you are moving toward it.</p>
+        <input id="goal-edit-id" type="hidden" />
+        <div class="form-grid">
+          <div class="form-field form-field-wide"><label for="dialog-goal-title">Goal title <span aria-hidden="true">*</span></label><input id="dialog-goal-title" required maxlength="72" autocomplete="off" placeholder="e.g. Build a portfolio project" /></div>
+          <div class="form-field"><label for="dialog-goal-category">Category</label><select id="dialog-goal-category"><option value="">Choose a category</option><option>Career</option><option>Health</option><option>Learning</option><option>Mindset</option><option>Life</option></select></div>
+          <div class="form-field"><label for="dialog-goal-target">Target <span aria-hidden="true">*</span></label><input id="dialog-goal-target" type="number" required min="1" step="1" placeholder="12" /></div>
+          <div class="form-field"><label for="dialog-goal-unit">Unit</label><input id="dialog-goal-unit" maxlength="24" placeholder="projects, hours, sessions" /></div>
+          <div class="form-field"><label for="dialog-goal-current">Current progress</label><input id="dialog-goal-current" type="number" min="0" step="1" value="0" /></div>
+          <div class="form-field form-field-wide"><label for="dialog-goal-why">Why this matters</label><input id="dialog-goal-why" maxlength="160" placeholder="What gets better when this is true?" /></div>
+          <div class="form-field"><label for="dialog-goal-deadline">Target date</label><input id="dialog-goal-deadline" type="date" /></div>
+          <div class="form-field"><label for="dialog-goal-next">Next visible step</label><input id="dialog-goal-next" maxlength="100" placeholder="The action you can take next" /></div>
+          <div class="form-field form-field-wide"><label for="dialog-goal-proof">Proof it is complete</label><input id="dialog-goal-proof" maxlength="100" placeholder="A result, link, certificate, or measurable outcome" /></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="danger-button hidden" type="button" id="delete-goal-button">Delete goal</button>
+          <span></span>
+          <button class="secondary-button" type="button" id="goal-cancel" data-close-dialog="goal-dialog">Cancel</button>
+          <button class="primary-button" type="submit">Save goal</button>
         </div>
       </form>
     </dialog>
@@ -180,6 +265,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260813-2"></script>
   </body>
 </html>

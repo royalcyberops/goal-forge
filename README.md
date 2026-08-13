@@ -16,14 +16,18 @@ Then open `http://localhost:4173`.
 
 ## Included
 
-- Editable monthly habit matrix
+- Detailed habit planning with purpose, minimum action, proof, preferred time, repeat days, and linked goals
+- Measurable goal management with deadlines, progress logging, and next-action prompts
+- A daily focus queue that turns active goals into three small, proof-producing actions
+- Schedule-aware monthly habit matrix with visible rest days
 - Live daily and weekly charts
-- Goal, completed, remaining, and percentage stats
+- Possible, completed, remaining, and percentage stats based on each habit's schedule
 - Per-habit analysis and top-habit ranking
 - Current streaks and XP/level feedback
 - Mood and sleep logs
 - Month/year switching
 - Browser-local persistence and JSON backup export
+- In-place migration for data saved by the original Goal Forge version
 - Responsive mobile navigation and horizontal tracker scrolling
 
 No account, server, external library, or API key is required.
