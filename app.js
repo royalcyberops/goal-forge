@@ -593,12 +593,15 @@
   function currentStreak(habit) {
     const now = freshNow();
     const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const oldest = /^\d{4}-\d{2}-\d{2}$/.test(habit.trackingStartedOn || "")
+    const declaredStart = /^\d{4}-\d{2}-\d{2}$/.test(habit.trackingStartedOn || "")
       ? new Date(`${habit.trackingStartedOn}T00:00:00`)
-      : new Date(cursor.getFullYear() - 2, cursor.getMonth(), cursor.getDate());
+      : cursor;
+    const recordedKeys = Object.keys(state.months).filter((key) => /^\d{4}-\d{2}$/.test(key)).sort();
+    const firstRecorded = recordedKeys.length ? dateForDay(recordedKeys[0], 1) : cursor;
+    const oldest = declaredStart > firstRecorded ? declaredStart : firstRecorded;
     let streak = 0;
     let dueDaysSeen = 0;
-    for (let scanned = 0; scanned < 730 && cursor >= oldest; scanned += 1) {
+    while (cursor >= oldest) {
       if (isHabitScheduledOn(habit, cursor)) {
         const key = monthKeyFor(cursor);
         const checked = (state.months[key]?.checks?.[habit.id] || []).includes(cursor.getDate());
