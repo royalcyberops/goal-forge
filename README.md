@@ -2,7 +2,7 @@
 
 A local-first monthly goal and habit tracker rebuilt from the supplied video reference.
 
-**Live app:** [goal-forge-royalcyberops-497.netlify.app](https://goal-forge-royalcyberops-497.netlify.app)
+**Live app:** [goal-forge-royalcyberops.netlify.app](https://goal-forge-royalcyberops.netlify.app)
 
 ## Run
 
